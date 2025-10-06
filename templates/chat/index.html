@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenAI Chat Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .form-group textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 120px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .response {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .response h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .response p {
+            color: #555;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .error {
+            background: #fff5f5;
+            border-left-color: #e53e3e;
+            color: #c53030;
+        }
+
+        .chat-history {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+
+        .chat-item {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .user-question {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+        }
+
+        .ai-answer {
+            background: #f3e5f5;
+            border-left: 4px solid #9c27b0;
+        }
+
+        .chat-item strong {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 OpenAI Chat</h1>
+            <p>Ask me anything and I'll help you with a response!</p>
+        </div>
+
+        <form id="chatForm">
+            <div class="form-group">
+                <label for="question">Your Question:</label>
+                <textarea 
+                    id="question" 
+                    name="question" 
+                    placeholder=""
+                    required
+                ></textarea>
+            </div>
+            
+            <button type="submit" class="btn" id="submitBtn">
+                Ask OpenAI
+            </button>
+          </br>
+        </form>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Getting response from OpenAI...</p>
+        </div>
+
+        <div id="chatHistory" class="chat-history"></div>
+    </div>
+
+    <script>
+        document.getElementById('chatForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const question = document.getElementById('question').value.trim();
+            const submitBtn = document.getElementById('submitBtn');
+            const loading = document.getElementById('loading');
+            const chatHistory = document.getElementById('chatHistory');
+            
+            if (!question) {
+                alert('Please enter a question');
+                return;
+            }
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            loading.style.display = 'block';
+            
+            try {
+                const response = await fetch('/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ question: question })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Add to chat history
+                    const chatItem = document.createElement('div');
+                    chatItem.innerHTML = `
+                        <div class="chat-item user-question">
+                            <strong>Your Question:</strong>
+                            ${data.question}
+                        </div>
+                        <div class="chat-item ai-answer">
+                            <strong>OpenAI Response:</strong>
+                            ${data.answer}
+                        </div>
+                    `;
+                    chatHistory.appendChild(chatItem);
+                    
+                    // Clear the form
+                    document.getElementById('question').value = '';
+                    
+                    // Scroll to bottom
+                    chatHistory.scrollTop = chatHistory.scrollHeight;
+                } else {
+                    // Show error
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'response error';
+                    errorDiv.innerHTML = `
+                        <h3>Error</h3>
+                        <p>${data.error}</p>
+                    `;
+                    chatHistory.appendChild(errorDiv);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'response error';
+                errorDiv.innerHTML = `
+                    <h3>Error</h3>
+                    <p>Failed to get response. Please check your connection and try again.</p>
+                `;
+                chatHistory.appendChild(errorDiv);
+            } finally {
+                // Hide loading state
+                submitBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
