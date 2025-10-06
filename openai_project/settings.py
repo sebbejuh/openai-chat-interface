@@ -25,7 +25,11 @@ SECRET_KEY = "django-insecure-+%bwnks0&4c=k$_+79dy(qis0)=8jmow4j&#zt!e38b9hkg))-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    "openaichatinterfacedjango-h5fwbjhwcsc3dbhy.swedencentral-01.azurewebsites.net",
+    "localhost",
+    "127.0.0.1",
+]
 
 
 # Application definition
